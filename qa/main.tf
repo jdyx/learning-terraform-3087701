@@ -11,5 +11,6 @@ module "qa" {
 
     ami_filter = {
         name = "bitnami-tomcat-10.1.29-0-linux-debian-12-x86_64-hvm-ebs-nami"
+        owner = "979382823631" # Bitnami
     }
 }
