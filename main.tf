@@ -69,7 +69,6 @@ module "blog_alb" {
       backend_port     = 80
       target_type      = "instance"
       }
-    }
   ]
 
   http_tcp_listeners = [
