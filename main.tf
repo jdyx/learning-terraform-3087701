@@ -35,7 +35,7 @@ module "blog_vpc" {
 
 module "autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
-  version = "6.6.0"
+  version = "8.1.0"
 
   name     = "blog"
   min_size = 1
@@ -45,6 +45,11 @@ module "autoscaling" {
   target_group_arns   = module.blog_alb.target_group_arns
 
   security_groups = [module.blog_sg.security_group_id]
+  traffic_source_attachments = {
+    blog_alb = {
+      traffic_source_identifier = module.blog_alb.target_groups["blog_asg"].arn
+      traffic_source_type = "elbv2"
+    }
 
   image_id               = data.aws_ami.app_ami.id
   instance_type          = var.instance_type
@@ -52,7 +57,7 @@ module "autoscaling" {
 
 module "blog_alb" {
   source  = "terraform-aws-modules/alb/aws"
-  version = "~> 6.0"
+  version = "9.13.0"
 
   name = "blog-alb"
 
@@ -62,22 +67,26 @@ module "blog_alb" {
   subnets            = module.blog_vpc.public_subnets
   security_groups    = [module.blog_sg.security_group_id]
 
-  target_groups = [
-    {
-      name_prefix      = "blog-"
-      backend_protocol = "HTTP"
-      backend_port     = 80
-      target_type      = "instance"
+  listeners = {
+    blog_http = {
+      port     = 80
+      protocol = "HTTP"
+      forward = {
+        target_group_key = "blog_asg"
       }
-  ]
-
-  http_tcp_listeners = [
-    {
-      port               = 80
-      protocol           = "HTTP"
-      target_group_index = 0
     }
-  ]
+  }
+
+  target_groups = {
+    blog_asg = {
+      name_prefix      = "blog-"
+      protocol         = "HTTP"
+      port             = 80
+      target_type      = "instance"
+      # Required argument to attach to the ASG later.
+      create_attachment = false
+    }
+ }
 
   tags = {
     Environment = "dev"
